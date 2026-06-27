@@ -607,7 +607,7 @@ cmd_packages_update() {
 		echo "  → $name packages updated"
 		echo "  Note: updates respect semver ranges (e.g. ^0.19.9 blocks 0.20.x)."
 		echo "  To check: cd $envdir/npm && npm outdated"
-		echo "  To force upgrade: pi install <pkg>@latest"
+		echo "  To force upgrade: cd $envdir/npm && pnpm install <pkg>@latest"
 	else
 		echo "  Warning: update failed for $name" >&2
 		exit 1
