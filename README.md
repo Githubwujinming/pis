@@ -149,6 +149,7 @@ If you use [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-foot
 | `create <name> --import <file>` | Create and import packages from file |
 | `use <name>` | Set the default pi target environment |
 | `delete <name>` | Delete an environment |
+| `rename <old> <new>` | Rename an environment |
 | `export [name] [file]` | Export an environment's package list |
 | `import <name> [file]` | Import packages from a file into an environment |
 | `list` | List all environments |

@@ -147,6 +147,7 @@ pi install github:Githubwujinming/pis-indicator
 | `create <名称> --import <文件>` | 创建后导入包列表 |
 | `use <名称>` | 设置默认 pi 指向的环境 |
 | `delete <名称>` | 删除环境 |
+| `rename <旧名> <新名>` | 重命名环境 |
 | `export [名称] [文件]` | 导出环境包列表 |
 | `import <名称> [文件]` | 从文件导入包到指定环境 |
 | `list` | 列出所有环境 |

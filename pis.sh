@@ -131,6 +131,7 @@ cmd_create() {
 		if [ "$fail" -gt 0 ]; then
 			echo "  Warning: $fail package(s) failed to install."
 			echo "  Import complete ($succ succeeded, $fail failed)"
+			exit 1
 		else
 			echo "  Import complete"
 		fi
@@ -240,6 +241,7 @@ cmd_import() {
 	if [ "$fail" -gt 0 ]; then
 		echo "  Warning: $fail package(s) failed to install."
 		echo "  Import complete ($succ succeeded, $fail failed)"
+		exit 1
 	else
 		echo "  Import complete"
 	fi
@@ -273,6 +275,13 @@ cmd_rename() {
 		echo "Usage: pis rename <old-name> <new-name>"
 		exit 1
 	}
+
+	# Validate names: only alphanumeric, underscore, hyphen
+	if ! echo "$old_name" | grep -qE '^[a-zA-Z0-9_-]+$' || ! echo "$new_name" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+		echo "  Error: environment name must only contain letters, numbers, hyphens, and underscores"
+		exit 1
+	fi
+
 	[ "$old_name" = "$new_name" ] && {
 		echo "  New name is the same as old name"
 		exit 1
@@ -286,19 +295,19 @@ cmd_rename() {
 		exit 1
 	}
 
-	# Rename the environment directory
-	mv "$SWAP/agent-$old_name" "$SWAP/agent-$new_name"
-	echo "  Renamed directory: agent-$old_name → agent-$new_name"
-
-	# Rename the command script
+	# Rename steps: order matters for safety with set -e
+	# Step 1: rename the command script first (lowest impact if interrupted)
 	if [ -f "$BIN/pi-$old_name" ]; then
 		mv "$BIN/pi-$old_name" "$BIN/pi-$new_name"
-		# Update the PI_CODING_AGENT_DIR in the new wrapper script
 		sed_i "s/agent-$old_name/agent-$new_name/g" "$BIN/pi-$new_name"
 		echo "  Renamed command: pi-$old_name → pi-$new_name"
 	fi
 
-	# Update active symlink if it points to the old environment
+	# Step 2: rename the environment directory
+	mv "$SWAP/agent-$old_name" "$SWAP/agent-$new_name"
+	echo "  Renamed directory: agent-$old_name → agent-$new_name"
+
+	# Step 3: update active symlink last
 	local linkto
 	linkto=$(readlink "$SWAP/agent" 2>/dev/null || true)
 	if [ "$linkto" = "agent-$old_name" ]; then
