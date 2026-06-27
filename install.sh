@@ -133,7 +133,7 @@ fs.renameSync(tmp, path);
 		else
 			# pnpm blocks build scripts for new packages — approve and retry
 			echo "    Approving pnpm build scripts..."
-			if cd "$env_dir/npm" 2>/dev/null && pnpm approve-builds --all 2>/dev/null && PI_CODING_AGENT_DIR="$env_dir" pi update --extensions 2>&1; then
+			if cd "$env_dir/npm" && pnpm approve-builds --all && PI_CODING_AGENT_DIR="$env_dir" pi update --extensions 2>&1; then
 				echo "    → $env_name migrated to pnpm"
 			else
 				echo "    Warning: pi update --extensions failed for $env_name" >&2
@@ -174,7 +174,7 @@ if [ "$INSTALL_INDICATOR" = "1" ]; then
 	else
 		# pnpm may block build scripts — approve and retry
 		echo "  Approving pnpm build scripts..."
-		if cd "$INSTALL_DIR/agent/npm" 2>/dev/null && pnpm approve-builds --all 2>/dev/null && PI_CODING_AGENT_DIR="$INSTALL_DIR/agent" pi install git:github.com/Githubwujinming/pis-indicator 2>&1; then
+		if mkdir -p "$INSTALL_DIR/agent/npm" && cd "$INSTALL_DIR/agent/npm" && pnpm approve-builds --all && PI_CODING_AGENT_DIR="$INSTALL_DIR/agent" pi install git:github.com/Githubwujinming/pis-indicator 2>&1; then
 			echo "  → pis-indicator installed"
 		else
 			echo "  Warning: pis-indicator installation failed"
