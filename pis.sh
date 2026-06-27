@@ -31,6 +31,22 @@ sed_i() {
 }
 
 # ============================================================
+# Environment helpers
+# ============================================================
+
+# Resolve environment directory from name (current / default / <name>)
+resolve_env_dir() {
+	local name="$1"
+	if [ "$name" = "current" ]; then
+		abs_path "$SWAP/agent" 2>/dev/null || echo "$SWAP/agent"
+	elif [ "$name" = "default" ]; then
+		echo "$SWAP/agent-default"
+	else
+		echo "$SWAP/agent-$name"
+	fi
+}
+
+# ============================================================
 # Command implementations
 # ============================================================
 
@@ -411,23 +427,23 @@ cmd_update() {
 }
 
 cmd_packages() {
-	local name="${2:-current}" envdir
-
-	if [ "$name" = "current" ]; then
-		envdir=$(abs_path "$SWAP/agent" 2>/dev/null) || envdir="$SWAP/agent"
-	elif [ "$name" = "default" ]; then
-		envdir="$SWAP/agent-default"
-	else
-		envdir="$SWAP/agent-$name"
-	fi
-
-	[ ! -f "$envdir/settings.json" ] && {
-		echo "  Environment '$name' has no settings.json"
-		exit 1
-	}
-
-	local count
-	count=$(node -e "
+	case "${2:-}" in
+	install | i)
+		cmd_packages_install "$@"
+		;;
+	remove | rm)
+		cmd_packages_remove "$@"
+		;;
+	*)
+		# Existing list behavior — unchanged
+		local name="${2:-current}" envdir
+		envdir=$(resolve_env_dir "$name")
+		[ ! -f "$envdir/settings.json" ] && {
+			echo "  Environment '$name' has no settings.json"
+			exit 1
+		}
+		local count
+		count=$(node -e "
 const fs = require('fs');
 const s = JSON.parse(fs.readFileSync('$envdir/settings.json', 'utf-8'));
 const pkgs = s.packages || [];
@@ -435,8 +451,94 @@ pkgs.forEach((p, i) => console.log((i + 1) + '. ' + p));
 console.log('---');
 console.log('Total: ' + pkgs.length + ' packages');
 " 2>&1)
-	echo "Packages in '$name' environment:"
-	echo "$count"
+		echo "Packages in '$name' environment:"
+		echo "$count"
+		;;
+	esac
+}
+
+cmd_packages_install() {
+	local pkg="$3" name="${4:-current}"
+	[ -z "$pkg" ] && {
+		echo "Usage: pis pkgs install <pkg> [env|--all]"
+		exit 1
+	}
+
+	if [ "$name" = "--all" ]; then
+		echo "  Installing $pkg to all environments..."
+		local fail=0 succ=0 total=0
+		for env_dir in "$SWAP"/agent-*; do
+			[ -d "$env_dir" ] || continue
+			total=$((total + 1))
+			local env_name="${env_dir#*/agent-}"
+			echo "    $env_name: $pkg"
+			if PI_CODING_AGENT_DIR="$env_dir" pi install "$pkg" 2>&1; then
+				succ=$((succ + 1))
+			else
+				fail=$((fail + 1))
+			fi
+		done
+		[ "$fail" -gt 0 ] && echo "  Warning: $fail/$total environment(s) failed"
+		[ "$fail" -gt 0 ] && exit 1
+		return
+	fi
+
+	local envdir
+	envdir=$(resolve_env_dir "$name")
+	[ ! -d "$envdir" ] && {
+		echo "  Environment '$name' does not exist"
+		exit 1
+	}
+
+	echo "  Installing $pkg to $name..."
+	if PI_CODING_AGENT_DIR="$envdir" pi install "$pkg" 2>&1; then
+		echo "  → $pkg installed"
+	else
+		echo "  Warning: $pkg installation failed" >&2
+		exit 1
+	fi
+}
+
+cmd_packages_remove() {
+	local pkg="$3" name="${4:-current}"
+	[ -z "$pkg" ] && {
+		echo "Usage: pis pkgs remove <pkg> [env|--all]"
+		exit 1
+	}
+
+	if [ "$name" = "--all" ]; then
+		echo "  Removing $pkg from all environments..."
+		local fail=0 succ=0 total=0
+		for env_dir in "$SWAP"/agent-*; do
+			[ -d "$env_dir" ] || continue
+			total=$((total + 1))
+			local env_name="${env_dir#*/agent-}"
+			echo "    $env_name: $pkg"
+			if PI_CODING_AGENT_DIR="$env_dir" pi remove "$pkg" 2>&1; then
+				succ=$((succ + 1))
+			else
+				fail=$((fail + 1))
+			fi
+		done
+		[ "$fail" -gt 0 ] && echo "  Warning: $fail/$total environment(s) failed"
+		[ "$fail" -gt 0 ] && exit 1
+		return
+	fi
+
+	local envdir
+	envdir=$(resolve_env_dir "$name")
+	[ ! -d "$envdir" ] && {
+		echo "  Environment '$name' does not exist"
+		exit 1
+	}
+
+	echo "  Removing $pkg from $name..."
+	if PI_CODING_AGENT_DIR="$envdir" pi remove "$pkg" 2>&1; then
+		echo "  → $pkg removed"
+	else
+		echo "  Warning: $pkg removal failed" >&2
+		exit 1
+	fi
 }
 
 cmd_help() {
@@ -459,6 +561,8 @@ cmd_help() {
 	echo "  list                           List all environments"
 	echo "  status                         Show current status"
 	echo "  packages [name]                List installed packages in an environment"
+	echo "  pkgs install <pkg> [env]       Install a package (omit env for current, --all for all)"
+	echo "  pkgs remove <pkg> [env]        Remove a package from an environment"
 	echo "  uninstall                      Remove pis and restore single-directory mode"
 	echo "  update                         Update pis to the latest version"
 	echo "  --version, -V                  Show version"

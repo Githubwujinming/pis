@@ -4,6 +4,10 @@
 
 ## 安装
 
+> pis 现已使用 **pnpm** 作为默认包管理器替代 npm。
+> 现有环境会在运行 install.sh 时自动迁移。
+> pnpm 全局共享包文件 — 跨环境不再有重复的 `node_modules`。
+
 ```bash
 # 方式一：一键安装
 curl -sL https://raw.githubusercontent.com/Githubwujinming/pis/main/install.sh | bash
@@ -99,7 +103,7 @@ pis import general standard_pkgs.txt
 ### 安装
 
 ```bash
-pi install github:Githubwujinming/pis-indicator
+pi install git:github.com/Githubwujinming/pis-indicator
 ```
 
 安装后重新加载 pi（`/reload`），状态栏将显示 `pi: <环境名称>`。
@@ -152,6 +156,8 @@ pi install github:Githubwujinming/pis-indicator
 | `list` | 列出所有环境 |
 | `status` | 查看当前状态 |
 | `packages` / `pkgs` [名称] | 列出环境中已安装的包 |
+| `pkgs install <包名> [环境]` | 安装包到指定环境（省略为当前，--all 为所有） |
+| `pkgs remove <包名> [环境]` | 从指定环境卸载包 |
 | `update` | 更新 pis 到最新版本 |
 | `uninstall` | 卸载 pis，恢复单目录模式 |
 
@@ -176,6 +182,7 @@ pi install github:Githubwujinming/pis-indicator
 |------|------|------|------|
 | **pi-coding-agent** | 是 | 所有命令 | 被管理的目标工具。安装脚本会检测，不存在则报错退出。 |
 | **Node.js** (`node`) | 是 | `pis export` | 解析 `settings.json`。pi 本身就需要 Node.js，通常已具备。 |
+| **pnpm** | 是 | 所有 `pi install` 调用 | 默认包管理器。install.sh 会自动安装。跨环境通过全局内容寻址存储共享包文件。 |
 | **Perl** | 仅 macOS | `abs_path()` 回退实现 | macOS 预装。Linux 直接使用 `readlink -f`。 |
 | **curl** 或 **wget** | 远程安装 | `install.sh` | 一键安装方式至少需要其一。 |
 
