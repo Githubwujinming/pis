@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # pi-env installer
-# Version: 0.0.1
+# Version: 0.2.0
 # Usage: curl -sL https://raw.githubusercontent.com/Githubwujinming/pi-env/main/install.sh | bash
 
 set -euo pipefail
 
 INSTALL_DIR="${PI_ENV_DIR:-$HOME/.pi}"
 BIN_DIR="${PI_ENV_BIN:-$HOME/.local/bin}"
-VERSION="0.0.1"
+VERSION="0.2.0"
 
 # Check pi — install if missing
 if ! command -v pi >/dev/null 2>&1; then
