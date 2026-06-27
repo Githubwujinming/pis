@@ -6,6 +6,12 @@ Multi-environment management tool for pi-coding-agent. Create, clone, import, ex
 
 ## Installation
 
+> pis now uses **pnpm** as the default package manager instead of npm.
+> Existing environments are automatically migrated when running install.sh.
+> pnpm shares packages globally — no more duplicate `node_modules` across environments.
+
+## Installation
+
 ```bash
 # One-liner install
 curl -sL https://raw.githubusercontent.com/Githubwujinming/pis/main/install.sh | bash
@@ -101,7 +107,7 @@ A pi extension that shows the currently active pi environment in the TUI status 
 ### Install
 
 ```bash
-pi install github:Githubwujinming/pis-indicator
+pi install git:github.com/Githubwujinming/pis-indicator
 ```
 
 After installation, reload pi (`/reload`) — the status bar will show `pi: <name>`.
@@ -154,6 +160,8 @@ If you use [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-foot
 | `list` | List all environments |
 | `status` | Show current status |
 | `packages` / `pkgs` [name] | List installed packages in an environment |
+| `pkgs install <pkg> [env]` | Install a package to an environment (omit env for current, use `--all` for all) |
+| `pkgs remove <pkg> [env]` | Remove a package from an environment |
 | `update` | Update pis to the latest version |
 | `uninstall` | Remove pis and restore single-directory mode |
 
@@ -178,6 +186,7 @@ Each environment corresponds to a separate config directory `~/.pi/agent-<name>/
 |------------|----------|---------|-------|
 | **pi-coding-agent** | Yes | All commands | The tool being managed. Installer checks and aborts if missing. |
 | **Node.js** (`node`) | Yes | `pis export` | Reads `settings.json`. pi itself requires Node.js, so it's typically already available. |
+| **pnpm** | Yes | All `pi install` calls | Default package manager. Auto-installed by `install.sh` if missing. Shares package files across environments via a global content-addressable store. |
 | **Perl** | macOS only | `abs_path()` fallback | Pre-installed on macOS. Linux uses `readlink -f` instead. |
 | **curl** or **wget** | Remote install | `install.sh` | At least one is needed for the one-liner install method. |
 
