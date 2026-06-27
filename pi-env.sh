@@ -306,6 +306,35 @@ cmd_update() {
 	echo "  Run 'pi-env help' to get started"
 }
 
+cmd_packages() {
+	local name="${2:-current}" envdir
+
+	if [ "$name" = "current" ]; then
+		envdir=$(abs_path "$SWAP/agent" 2>/dev/null) || envdir="$SWAP/agent"
+	elif [ "$name" = "default" ]; then
+		envdir="$SWAP/agent-default"
+	else
+		envdir="$SWAP/agent-$name"
+	fi
+
+	[ ! -f "$envdir/settings.json" ] && {
+		echo "  Environment '$name' has no settings.json"
+		exit 1
+	}
+
+	local count
+	count=$(node -e "
+const fs = require('fs');
+const s = JSON.parse(fs.readFileSync('$envdir/settings.json', 'utf-8'));
+const pkgs = s.packages || [];
+pkgs.forEach((p, i) => console.log((i + 1) + '. ' + p));
+console.log('---');
+console.log('Total: ' + pkgs.length + ' packages');
+" 2>&1)
+	echo "Packages in '$name' environment:"
+	echo "$count"
+}
+
 cmd_help() {
 	echo "pi-env v$VERSION — Multi pi environment manager"
 	echo ""
@@ -322,6 +351,7 @@ cmd_help() {
 	echo "  import <name> [file]           Import packages from file"
 	echo "  list                           List all environments"
 	echo "  status                         Show current status"
+	echo "  packages [name]                List installed packages in an environment"
 	echo "  uninstall                      Remove pi-env and restore single-directory mode"
 	echo "  update                         Update pi-env to the latest version"
 	echo "  --version, -V                  Show version"
@@ -350,6 +380,7 @@ import) cmd_import "$@" ;;
 status | st) cmd_status "$@" ;;
 uninstall) cmd_uninstall "$@" ;;
 update) cmd_update "$@" ;;
+packages | pkgs) cmd_packages "$@" ;;
 --version | -V) echo "pi-env v$VERSION" ;;
 -h | --help | help | *) cmd_help ;;
 esac
