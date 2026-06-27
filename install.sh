@@ -125,6 +125,8 @@ fs.renameSync(tmp, path);
 
 		# Delete old node_modules to force clean rebuild with pnpm
 		rm -rf "$env_dir/npm/node_modules"
+		# Remove orphaned npm lockfile (pnpm uses pnpm-lock.yaml)
+		rm -f "$env_dir/npm/package-lock.json"
 		echo "    Rebuilding packages with pnpm..."
 		if PI_CODING_AGENT_DIR="$env_dir" pi update --extensions 2>&1; then
 			echo "    → $env_name migrated to pnpm"
@@ -173,10 +175,10 @@ if [ "$INSTALL_INDICATOR" = "1" ]; then
 		# pnpm may block build scripts — approve and retry
 		echo "  Approving pnpm build scripts..."
 		if cd "$INSTALL_DIR/agent/npm" 2>/dev/null && pnpm approve-builds --all 2>/dev/null && PI_CODING_AGENT_DIR="$INSTALL_DIR/agent" pi install git:github.com/Githubwujinming/pis-indicator 2>&1; then
-echo "  → pis-indicator installed"
+			echo "  → pis-indicator installed"
 		else
-echo "  Warning: pis-indicator installation failed"
-echo "  You can install later with: pi install git:github.com/Githubwujinming/pis-indicator"
+			echo "  Warning: pis-indicator installation failed"
+			echo "  You can install later with: pi install git:github.com/Githubwujinming/pis-indicator"
 		fi
 	fi
 fi
