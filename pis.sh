@@ -51,7 +51,7 @@ cmd_list() {
 cmd_create() {
 	local name="$2"
 	[ -z "$name" ] && {
-		echo "Usage: pis create <name> [--clone <source>] [--use] [--import <file>]"
+		echo "Usage: pis create <name> [--clone <source>] [--use] [--import <file>] [--install-indicator | --no-indicator]"
 		exit 1
 	}
 	[ -d "$SWAP/agent-$name" ] && {
@@ -59,7 +59,7 @@ cmd_create() {
 		exit 1
 	}
 
-	local do_use=0 impfile="" clone_src=""
+	local do_use=0 impfile="" clone_src="" install_indicator=1
 	shift 2
 	while [ $# -gt 0 ]; do
 		case "$1" in
@@ -72,6 +72,8 @@ cmd_create() {
 			impfile="$2"
 			shift
 			;;
+		--install-indicator) install_indicator=1 ;;
+		--no-indicator) install_indicator=0 ;;
 		esac
 		shift
 	done
@@ -111,6 +113,16 @@ cmd_create() {
 	echo "  Command: pi-$name"
 
 	[ "$do_use" = "1" ] && ln -snf "agent-$name" "$SWAP/agent" && echo "  Set as default"
+
+	# Install pis-indicator by default (independent of --import)
+	if [ "$install_indicator" = "1" ]; then
+		echo "  Installing pis-indicator..."
+		if PI_CODING_AGENT_DIR="$SWAP/agent-$name" pi install github:Githubwujinming/pis-indicator 2>&1; then
+			echo "  → pis-indicator installed"
+		else
+			echo "  Warning: pis-indicator installation failed"
+		fi
+	fi
 
 	if [ -n "$impfile" ]; then
 		[ ! -f "$impfile" ] && {
@@ -415,7 +427,9 @@ cmd_help() {
 	echo "  create <name>                  Create a blank environment"
 	echo "  create <name> --clone <src>    Clone from an environment"
 	echo "  create <name> --use           Set as default on creation"
-	echo "  create <name> --import <file>  Import packages on creation"
+	echo "  create <name> --import <file>            Import packages on creation
+  create <name> --install-indicator  Install pis-indicator (default)
+  create <name> --no-indicator       Skip pis-indicator installation"
 	echo "  delete <name>                  Delete an environment"
 	echo "  rename <old> <new>             Rename an environment"
 	echo "  use <name>                     Set default pi environment"

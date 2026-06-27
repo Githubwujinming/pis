@@ -77,8 +77,7 @@ Create a lightweight environment for daily tasks, research, and web browsing:
 
 ```bash
 pis create general --use
-pi install npm:pi-btw
-pi install npm:web-tool
+pis import general standard_pkgs.txt
 # ... install only what you need
 ```
 

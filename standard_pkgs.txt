@@ -1,0 +1,6 @@
+npm:pi-vision-tool
+npm:pi-btw
+npm:pi-powerline-footer
+npm:pi-paster
+npm:pi-agent-browser-native
+npm:@ayulab/pi-rewind

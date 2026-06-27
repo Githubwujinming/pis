@@ -9,6 +9,19 @@ INSTALL_DIR="${PI_ENV_DIR:-$HOME/.pi}"
 BIN_DIR="${PI_ENV_BIN:-$HOME/.local/bin}"
 VERSION="0.2.0"
 
+# Parse --no-indicator / --install-indicator
+INSTALL_INDICATOR=1
+if [ $# -gt 0 ]; then
+	case "$1" in
+	--no-indicator) INSTALL_INDICATOR=0 ;;
+	--install-indicator) INSTALL_INDICATOR=1 ;;
+	*)
+		echo "Usage: $0 [--no-indicator | --install-indicator]"
+		exit 1
+		;;
+	esac
+fi
+
 # Check pi — install if missing
 if ! command -v pi >/dev/null 2>&1; then
 	echo "pi not found. Installing pi-coding-agent..."
@@ -70,6 +83,17 @@ else
 		echo "export PATH=\"\$PATH:$BIN_DIR\""
 	} >>"$rc"
 	echo "  → Please run: source $rc"
+fi
+
+# Install pis-indicator by default
+if [ "$INSTALL_INDICATOR" = "1" ]; then
+	echo "Installing pis-indicator..."
+	if PI_CODING_AGENT_DIR="$INSTALL_DIR/agent" pi install github:Githubwujinming/pis-indicator 2>&1; then
+		echo "  → pis-indicator installed"
+	else
+		echo "  Warning: pis-indicator installation failed"
+		echo "  You can install later with: pi install github:Githubwujinming/pis-indicator"
+	fi
 fi
 
 echo "pis v$VERSION installed successfully"

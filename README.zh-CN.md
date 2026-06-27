@@ -75,8 +75,7 @@ pis import vibe vibecoding_pkgs.txt
 
 ```bash
 pis create general --use
-pi install npm:pi-btw
-pi install npm:web-tool
+pis import general standard_pkgs.txt
 # ... 只装需要的包
 ```
 
