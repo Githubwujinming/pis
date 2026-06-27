@@ -135,7 +135,13 @@ fs.renameSync(tmp, path);
 		if PI_CODING_AGENT_DIR="$SWAP/agent-$name" pi install git:github.com/Githubwujinming/pis-indicator 2>&1; then
 			echo "  → pis-indicator installed"
 		else
-			echo "  Warning: pis-indicator installation failed"
+			# pnpm may block build scripts — approve and retry
+			echo "  Approving pnpm build scripts..."
+			if cd "$SWAP/agent-$name/npm" 2>/dev/null && pnpm approve-builds --all 2>/dev/null && PI_CODING_AGENT_DIR="$SWAP/agent-$name" pi install git:github.com/Githubwujinming/pis-indicator 2>&1; then
+				echo "  → pis-indicator installed"
+			else
+				echo "  Warning: pis-indicator installation failed"
+			fi
 		fi
 	fi
 
