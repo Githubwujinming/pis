@@ -414,7 +414,9 @@ cmd_uninstall() {
 cmd_update() {
 	[[ "${2:-}" =~ ^- ]] && {
 		echo "Usage: pis update"
-		echo "Update pis to the latest version"
+		echo ""
+		echo "Update pis itself to the latest version from GitHub."
+		echo "Takes no arguments. To update pi packages, use: pis pkgs update [env]"
 		exit 1
 	}
 	echo "Updating pis..."
