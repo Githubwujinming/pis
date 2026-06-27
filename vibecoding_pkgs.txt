@@ -16,3 +16,4 @@ npm:pi-shazam
 npm:pi-lens
 npm:@ayulab/pi-rewind
 npm:@narumitw/pi-goal
+npm:@wjm/pi-env-indicator

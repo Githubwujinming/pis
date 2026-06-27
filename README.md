@@ -47,7 +47,7 @@ pi-env update
 
 ## Recommended Packages
 
-A curated list of recommended pi packages is available in [`vibecoding_pkgs.txt`](vibecoding_pkgs.txt).
+A curated list of recommended pi packages is available in [`vibecoding_pkgs.txt`](vibecoding_pkgs.txt), including development tools, utilities, and the [pi-env-indicator](https://github.com/Githubwujinming/pi-env) extension that shows your current environment in pi's status bar.
 
 To create a new environment and install all recommended packages in one go:
 
@@ -94,6 +94,50 @@ Installing every package into a single pi environment can lead to:
 - Difficulty reproducing a setup on another machine
 
 With pi-env, each scenario gets its own `~/.pi/agent-<name>/` directory — completely isolated settings, packages, sessions, and auth.
+
+## pi-env-indicator
+
+A pi extension that shows the currently active pi environment in the TUI status bar.
+
+### Install
+
+```bash
+pi install npm:@wjm/pi-env-indicator
+```
+
+After installation, reload pi (`/reload`) — the status bar will show `pi: <name>`.
+
+### What it does
+
+- Shows `pi: <name>` in pi's status bar (footer), where `<name>` is your current pi environment
+- Works with both `pi` (default environment via symlink) and `pi-<name>` (specific environment)
+- Provides a `/pi-env` command to display the current environment on demand
+
+### How it detects the environment
+
+1. If running via `pi-<name>` — detects the environment from `PI_CODING_AGENT_DIR`
+2. Otherwise — resolves the `~/.pi/agent` symlink
+3. Falls back to `"default"`
+
+### Powerline Footer Integration
+
+If you use [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-footer), add a custom item to your powerline settings in `settings.json`:
+
+```json
+{
+  "powerline": {
+    "customItems": [
+      {
+        "id": "pi-env",
+        "statusKey": "pi-env",
+        "position": "right",
+        "color": "accent",
+        "prefix": "π "
+      }
+    ]
+  }
+}
+```
 
 ## Commands
 

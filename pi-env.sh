@@ -118,12 +118,22 @@ cmd_create() {
 			exit 1
 		}
 		echo "  Importing packages..."
+		local fail=0 succ=0
 		while IFS= read -r pkg; do
 			[ -z "$pkg" ] && continue
 			echo "    $pkg"
-			PI_CODING_AGENT_DIR="$SWAP/agent-$name" pi install "$pkg" 2>/dev/null
+			if PI_CODING_AGENT_DIR="$SWAP/agent-$name" pi install "$pkg" 2>&1; then
+				succ=$((succ + 1))
+			else
+				fail=$((fail + 1))
+			fi
 		done <"$impfile"
-		echo "  Import complete"
+		if [ "$fail" -gt 0 ]; then
+			echo "  Warning: $fail package(s) failed to install."
+			echo "  Import complete ($succ succeeded, $fail failed)"
+		else
+			echo "  Import complete"
+		fi
 	fi
 }
 
@@ -217,12 +227,22 @@ cmd_import() {
 		exit 1
 	}
 
+	local fail=0 succ=0
 	while IFS= read -r pkg; do
 		[ -z "$pkg" ] && continue
 		echo "    $pkg"
-		PI_CODING_AGENT_DIR="$envdir" pi install "$pkg" 2>/dev/null
+		if PI_CODING_AGENT_DIR="$envdir" pi install "$pkg" 2>&1; then
+			succ=$((succ + 1))
+		else
+			fail=$((fail + 1))
+		fi
 	done <"$infile"
-	echo "  Import complete"
+	if [ "$fail" -gt 0 ]; then
+		echo "  Warning: $fail package(s) failed to install."
+		echo "  Import complete ($succ succeeded, $fail failed)"
+	else
+		echo "  Import complete"
+	fi
 }
 
 cmd_status() {

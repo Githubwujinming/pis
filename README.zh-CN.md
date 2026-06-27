@@ -45,7 +45,7 @@ pi-env update
 
 ## 推荐包
 
-推荐安装包列表见 [`vibecoding_pkgs.txt`](vibecoding_pkgs.txt)。
+推荐安装包列表见 [`vibecoding_pkgs.txt`](vibecoding_pkgs.txt)，包含开发工具、实用工具以及 [pi-env-indicator](https://github.com/Githubwujinming/pi-env) 扩展（在状态栏显示当前环境）。
 
 一行命令创建新环境并安装全部推荐包：
 
@@ -92,6 +92,50 @@ pi install npm:web-tool
 - 难以在其他机器上复现同样的配置
 
 使用 pi-env，每个场景拥有独立的 `~/.pi/agent-<name>/` 目录 — 配置、包、会话、认证完全隔离。
+
+## pi-env-indicator
+
+在 pi TUI 状态栏中显示当前 pi 环境的扩展。
+
+### 安装
+
+```bash
+pi install npm:@wjm/pi-env-indicator
+```
+
+安装后重新加载 pi（`/reload`），状态栏将显示 `pi: <环境名称>`。
+
+### 功能
+
+- 在 pi 底部状态栏显示 `pi: <环境名称>`
+- 同时支持 `pi`（默认环境）和 `pi-<名称>`（指定环境）
+- 提供 `/pi-env` 命令，随时查看当前环境
+
+### 环境检测逻辑
+
+1. 通过 `pi-<名称>` 运行时 — 从 `PI_CODING_AGENT_DIR` 环境变量检测
+2. 否则 — 解析 `~/.pi/agent` 软链接
+3. 兜底返回 `"default"`
+
+### Powerline 集成
+
+如果你使用 [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-footer)，可以在 `settings.json` 中添加自定义项：
+
+```json
+{
+  "powerline": {
+    "customItems": [
+      {
+        "id": "pi-env",
+        "statusKey": "pi-env",
+        "position": "right",
+        "color": "accent",
+        "prefix": "π "
+      }
+    ]
+  }
+}
+```
 
 ## 命令
 
