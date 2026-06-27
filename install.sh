@@ -51,15 +51,26 @@ if [ -d "$INSTALL_DIR/agent" ] && [ ! -L "$INSTALL_DIR/agent" ]; then
 	echo "  → $INSTALL_DIR/agent now points to $INSTALL_DIR/agent-default"
 fi
 
-# Check PATH
-case ":$PATH:" in
-*":$BIN_DIR:"*) ;;
-*)
-	echo "  Hint: $BIN_DIR is not in PATH. Add it to your shell config:"
-	echo "    echo 'export PATH=\"\$PATH:$BIN_DIR\"' >> ~/.bashrc"
-	echo "    source ~/.bashrc"
-	;;
+# Auto-add to PATH
+case "$SHELL" in
+*zsh*) rc="$HOME/.zshrc" ;;
+*bash*) rc="$HOME/.bashrc" ;;
+*) rc="$HOME/.profile" ;;
 esac
+
+if echo ":$PATH:" | grep -q ":$BIN_DIR:"; then
+	: # already in PATH
+elif [ -f "$rc" ] && grep -q "$BIN_DIR" "$rc" 2>/dev/null; then
+	: # already configured in rc file (waiting for source)
+else
+	echo "  Adding $BIN_DIR to $rc ..."
+	{
+		echo ""
+		echo "# pi-env"
+		echo "export PATH=\"\$PATH:$BIN_DIR\""
+	} >>"$rc"
+	echo "  → Please run: source $rc"
+fi
 
 echo "pi-env v$VERSION installed successfully"
 echo "Run 'pi-env help' to get started"
