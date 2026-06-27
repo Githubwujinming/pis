@@ -253,7 +253,7 @@ cmd_uninstall() {
 	echo "Pi environments under $SWAP/agent-* will be kept."
 	read -r -p "Continue? [y/N] " answer
 	case "$answer" in
-	[Yy]|[Yy][Ee][Ss]) ;;
+	[Yy] | [Yy][Ee][Ss]) ;;
 	*)
 		echo "  Cancelled."
 		exit 0
@@ -282,6 +282,30 @@ cmd_uninstall() {
 	echo "To clean up leftover environments, remove $SWAP/agent-* directories manually."
 }
 
+cmd_update() {
+	echo "Updating pi-env..."
+
+	local repo="Githubwujinming/pi-env"
+	local url="https://raw.githubusercontent.com/$repo/main/pi-env.sh"
+
+	if command -v curl >/dev/null 2>&1; then
+		curl -sL "$url" -o "$SWAP/pi-env.sh"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -q "$url" -O "$SWAP/pi-env.sh"
+	else
+		echo "Error: curl or wget is required"
+		exit 1
+	fi
+
+	chmod +x "$SWAP/pi-env.sh"
+	ln -sf "$SWAP/pi-env.sh" "$BIN/pi-env"
+
+	local new_ver
+	new_ver=$(grep '^VERSION=' "$SWAP/pi-env.sh" | cut -d'=' -f2 | tr -d '"')
+	echo "  Updated to v$new_ver"
+	echo "  Run 'pi-env help' to get started"
+}
+
 cmd_help() {
 	echo "pi-env v$VERSION — Multi pi environment manager"
 	echo ""
@@ -299,6 +323,7 @@ cmd_help() {
 	echo "  list                           List all environments"
 	echo "  status                         Show current status"
 	echo "  uninstall                      Remove pi-env and restore single-directory mode"
+	echo "  update                         Update pi-env to the latest version"
 	echo "  --version, -V                  Show version"
 	echo "  help                           Show this help"
 	echo ""
@@ -324,6 +349,7 @@ export) cmd_export "$@" ;;
 import) cmd_import "$@" ;;
 status | st) cmd_status "$@" ;;
 uninstall) cmd_uninstall "$@" ;;
+update) cmd_update "$@" ;;
 --version | -V) echo "pi-env v$VERSION" ;;
 -h | --help | help | *) cmd_help ;;
 esac
