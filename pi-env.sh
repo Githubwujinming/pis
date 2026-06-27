@@ -158,6 +158,14 @@ cmd_use() {
 		echo "  Environment '$name' does not exist"
 		exit 1
 	}
+
+	# If agent is a real directory (legacy state before pi-env), convert it
+	if [ -d "$SWAP/agent" ] && [ ! -L "$SWAP/agent" ]; then
+		echo "  Converting existing pi config to environment: legacy"
+		mv "$SWAP/agent" "$SWAP/agent-legacy"
+		echo "  → Moved to $SWAP/agent-legacy"
+	fi
+
 	ln -snf "agent-$name" "$SWAP/agent"
 	echo "  Default pi environment set to: $name"
 }
