@@ -434,6 +434,9 @@ cmd_packages() {
 	remove | rm)
 		cmd_packages_remove "$@"
 		;;
+	update | up)
+		cmd_packages_update "$@"
+		;;
 	*)
 		# Existing list behavior — unchanged
 		local name="${2:-current}" envdir
@@ -541,6 +544,44 @@ cmd_packages_remove() {
 	fi
 }
 
+cmd_packages_update() {
+	local name="${3:-current}"
+
+	if [ "$name" = "--all" ]; then
+		echo "  Updating all environments..."
+		local fail=0 succ=0 total=0
+		for env_dir in "$SWAP"/agent-*; do
+			[ -d "$env_dir" ] || continue
+			total=$((total + 1))
+			local env_name="${env_dir#*/agent-}"
+			echo "    $env_name: updating packages..."
+			if PI_CODING_AGENT_DIR="$env_dir" pi update --extensions 2>&1; then
+				succ=$((succ + 1))
+			else
+				fail=$((fail + 1))
+			fi
+		done
+		[ "$fail" -gt 0 ] && echo "  Warning: $fail/$total environment(s) failed"
+		[ "$fail" -gt 0 ] && exit 1
+		return
+	fi
+
+	local envdir
+	envdir=$(resolve_env_dir "$name")
+	[ ! -d "$envdir" ] && {
+		echo "  Environment '$name' does not exist"
+		exit 1
+	}
+
+	echo "  Updating packages in $name..."
+	if PI_CODING_AGENT_DIR="$envdir" pi update --extensions 2>&1; then
+		echo "  → $name packages updated"
+	else
+		echo "  Warning: update failed for $name" >&2
+		exit 1
+	fi
+}
+
 cmd_help() {
 	echo "pis v$VERSION — Multi pi environment manager"
 	echo ""
@@ -563,6 +604,7 @@ cmd_help() {
 	echo "  packages [name]                List installed packages in an environment"
 	echo "  pkgs install <pkg> [env]       Install a package (omit env for current, --all for all)"
 	echo "  pkgs remove <pkg> [env]        Remove a package from an environment"
+	echo "  pkgs update [env]              Update all packages (omit env for current, --all for all)"
 	echo "  uninstall                      Remove pis and restore single-directory mode"
 	echo "  update                         Update pis to the latest version"
 	echo "  --version, -V                  Show version"
