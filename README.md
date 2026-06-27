@@ -37,6 +37,10 @@ pi-env export
 # Import packages from a file
 pi-env import test pi-packages.txt
 
+# List installed packages in the current environment
+pi-env packages
+pi-env pkgs
+
 # Update pi-env to the latest version
 pi-env update
 ```
@@ -105,6 +109,7 @@ With pi-env, each scenario gets its own `~/.pi/agent-<name>/` directory — comp
 | `import <name> [file]` | Import packages from a file into an environment |
 | `list` | List all environments |
 | `status` | Show current status |
+| `packages` / `pkgs` [name] | List installed packages in an environment |
 | `update` | Update pi-env to the latest version |
 | `uninstall` | Remove pi-env and restore single-directory mode |
 
