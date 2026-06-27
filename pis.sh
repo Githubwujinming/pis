@@ -267,6 +267,48 @@ cmd_status() {
 	done
 }
 
+cmd_rename() {
+	local old_name="$2" new_name="$3"
+	[ -z "$old_name" ] || [ -z "$new_name" ] && {
+		echo "Usage: pis rename <old-name> <new-name>"
+		exit 1
+	}
+	[ "$old_name" = "$new_name" ] && {
+		echo "  New name is the same as old name"
+		exit 1
+	}
+	[ ! -d "$SWAP/agent-$old_name" ] && {
+		echo "  Environment '$old_name' does not exist"
+		exit 1
+	}
+	[ -d "$SWAP/agent-$new_name" ] && {
+		echo "  Environment '$new_name' already exists"
+		exit 1
+	}
+
+	# Rename the environment directory
+	mv "$SWAP/agent-$old_name" "$SWAP/agent-$new_name"
+	echo "  Renamed directory: agent-$old_name → agent-$new_name"
+
+	# Rename the command script
+	if [ -f "$BIN/pi-$old_name" ]; then
+		mv "$BIN/pi-$old_name" "$BIN/pi-$new_name"
+		# Update the PI_CODING_AGENT_DIR in the new wrapper script
+		sed_i "s/agent-$old_name/agent-$new_name/g" "$BIN/pi-$new_name"
+		echo "  Renamed command: pi-$old_name → pi-$new_name"
+	fi
+
+	# Update active symlink if it points to the old environment
+	local linkto
+	linkto=$(readlink "$SWAP/agent" 2>/dev/null || true)
+	if [ "$linkto" = "agent-$old_name" ]; then
+		ln -snf "agent-$new_name" "$SWAP/agent"
+		echo "  Updated active symlink → $new_name"
+	fi
+
+	echo "  Renamed: $old_name → $new_name"
+}
+
 cmd_uninstall() {
 	local answer
 	echo "This will remove pis and restore pi to normal single-directory mode."
@@ -366,6 +408,7 @@ cmd_help() {
 	echo "  create <name> --use           Set as default on creation"
 	echo "  create <name> --import <file>  Import packages on creation"
 	echo "  delete <name>                  Delete an environment"
+	echo "  rename <old> <new>             Rename an environment"
 	echo "  use <name>                     Set default pi environment"
 	echo "  export [name] [file]           Export package list"
 	echo "  import <name> [file]           Import packages from file"
@@ -384,6 +427,7 @@ cmd_help() {
 	echo "  pis export                                Export current package list"
 	echo "  pis import rpiv pkgs.txt                  Import packages to rpiv"
 	echo "  pis list                                  List all environments"
+	echo "  pis rename old new                        Rename environment"
 }
 
 # ============================================================
@@ -392,6 +436,7 @@ cmd_help() {
 
 case "${1:-help}" in
 list | ls) cmd_list "$@" ;;
+rename) cmd_rename "$@" ;;
 create | new) cmd_create "$@" ;;
 delete | rm) cmd_delete "$@" ;;
 use) cmd_use "$@" ;;
