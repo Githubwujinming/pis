@@ -463,7 +463,12 @@ cmd_packages() {
 	*)
 		# Unknown flags show usage, otherwise list behavior
 		[[ "${2:-}" =~ ^- ]] && {
-			echo "Usage: pis pkgs [env] | install <pkg> [env] | remove <pkg> [env] | update [env] | outdated [env|--all]"
+			echo "Usage:"
+			echo "  pis pkgs [env]                      List packages"
+			echo "  pis pkgs install <pkg> [env]        Install a package"
+			echo "  pis pkgs remove <pkg> [env]         Remove a package"
+			echo "  pis pkgs update [env]               Update packages"
+			echo "  pis pkgs outdated [env|--all]       Show outdated packages"
 			exit 1
 		}
 		local name="${2:-current}" envdir
@@ -615,6 +620,12 @@ cmd_packages_update() {
 			else
 				fail=$((fail + 1))
 			fi
+			# pnpm treats @latest as a no-op when the existing range already covers it,
+			# so pi update --extensions may not actually update npm packages.
+			# Run pnpm update directly to force actual updates within range.
+			if [ -d "$env_dir/npm" ]; then
+				(cd "$env_dir/npm" && pnpm update --config.minimumReleaseAge=0 2>&1) || true
+			fi
 		done
 		[ "$fail" -gt 0 ] && echo "  Warning: $fail/$total environment(s) failed"
 		[ "$fail" -gt 0 ] && exit 1
@@ -630,15 +641,21 @@ cmd_packages_update() {
 
 	echo "  Updating packages in $name..."
 	if PI_CODING_AGENT_DIR="$envdir" pi update --extensions 2>&1; then
-		echo "  → $name packages updated"
-		echo "  Note: updates respect semver ranges (e.g. ^0.19.9 blocks 0.20.x)."
-		echo "  To check: cd $envdir/npm && npm outdated"
-		echo "  To force upgrade: cd $envdir/npm && pnpm install <pkg>@<version>"
-		echo "  (use the version from npm outdated's 'Latest' column)"
+		echo "  → pi extensions updated"
 	else
-		echo "  Warning: update failed for $name" >&2
-		exit 1
+		echo "  Warning: pi update --extensions failed for $name" >&2
 	fi
+	# pnpm treats @latest as a no-op when the existing range already covers it,
+	# so pi update --extensions may not actually update npm packages.
+	# Run pnpm update directly to force actual updates within range.
+	if [ -d "$envdir/npm" ]; then
+		cd "$envdir/npm" && pnpm update --config.minimumReleaseAge=0 2>&1
+	fi
+	echo "  → $name packages updated"
+	echo "  Note: updates respect semver ranges (e.g. ^0.19.9 blocks 0.20.x)."
+	echo "  To check: cd $envdir/npm && npm outdated"
+	echo "  To force upgrade: cd $envdir/npm && pnpm install <pkg>@<version>"
+	echo "  (use the version from npm outdated's 'Latest' column)"
 }
 
 cmd_packages_outdated() {
@@ -909,7 +926,7 @@ cmd_help() {
 	echo "  status                         Show current status"
 	echo "  packages [name]                List installed packages in an environment"
 	echo "  pkgs install <pkg> [env]       Install a package (omit env for current, --all for all)"
-	echo "  pkgs remove <pkg> [env]        Remove a package from an environment"
+	echo "  pkgs remove <pkg> [env]        Remove a package (omit env for current, --all for all)"
 	echo "  pkgs update [env]              Update all packages (omit env for current, --all for all)"
 	echo "  pkgs outdated [env]            Show outdated packages in an environment (omit env for current, --all for all)"
 	echo "  tools list                     List installed tools"
