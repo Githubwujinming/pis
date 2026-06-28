@@ -110,13 +110,20 @@ cmd_create() {
 			exit 1
 		fi
 		echo "  Cloned from '$clone_src': $name"
-	else
-		mkdir -p "$SWAP/agent-$name/bin"
+		# Rebuild symlinks to shared tools after clone
 		if [ -d "$SWAP/tools" ]; then
+			rm -rf "$SWAP/agent-$name/bin"
+			mkdir -p "$SWAP/agent-$name/bin"
 			for tool in "$SWAP/tools"/*; do
 				[ -f "$tool" ] && ln -s "../../tools/$(basename "$tool")" "$SWAP/agent-$name/bin/"
 			done
 		fi
+	else
+		mkdir -p "$SWAP/tools"
+		mkdir -p "$SWAP/agent-$name/bin"
+		for tool in "$SWAP/tools"/*; do
+			[ -f "$tool" ] && ln -s "../../tools/$(basename "$tool")" "$SWAP/agent-$name/bin/"
+		done
 		echo "  Created blank environment: $name"
 	fi
 
@@ -698,6 +705,189 @@ cmd_packages_outdated() {
 	fi
 }
 
+# ============================================================
+# Tool management
+# ============================================================
+
+cmd_tools() {
+	case "${2:-}" in
+	list | ls)
+		cmd_tools_list "$@"
+		;;
+	install | i)
+		cmd_tools_install "$@"
+		;;
+	remove | rm)
+		cmd_tools_remove "$@"
+		;;
+	sync)
+		cmd_tools_sync "$@"
+		;;
+	*)
+		[[ "${2:-}" =~ ^- ]] && {
+			echo "Usage: pis tools list | install <name> --url <URL> | remove <name> | sync [env|--all]"
+			exit 1
+		}
+		# Unknown subcommand — show error instead of silently listing
+		if [ -n "${2:-}" ]; then
+			echo "  Unknown subcommand: $2"
+			echo "Usage: pis tools list | install <name> --url <URL> | remove <name> | sync [env|--all]"
+			exit 1
+		fi
+		cmd_tools_list "$@"
+		;;
+	esac
+}
+
+cmd_tools_list() {
+	echo "Installed tools:"
+	local count=0
+	for f in "$SWAP/tools"/*; do
+		[ -f "$f" ] || continue
+		echo "  $(basename "$f")"
+		count=$((count + 1))
+	done
+	[ "$count" -eq 0 ] && echo "  (none)"
+}
+
+cmd_tools_install() {
+	local name="$3" url=""
+	[ -z "$name" ] || [[ "$name" =~ ^- ]] && {
+		echo "Usage: pis tools install <name> --url <URL>"
+		exit 1
+	}
+
+	shift 3
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		--url)
+			url="$2"
+			shift
+			;;
+		*)
+			echo "  Unknown option: $1"
+			exit 1
+			;;
+		esac
+		shift
+	done
+
+	[ -z "$url" ] && {
+		echo "Usage: pis tools install <name> --url <URL>"
+		exit 1
+	}
+
+	mkdir -p "$SWAP/tools"
+
+	local toolpath="$SWAP/tools/$name"
+	echo "  Downloading $name..."
+	if ! curl -sL --fail "$url" -o "$toolpath"; then
+		rm -f "$toolpath"
+		echo "  Error: download failed for $name" >&2
+		exit 1
+	fi
+
+	# Content validation: must be ELF (Linux) or Mach-O (macOS)
+	if command -v file >/dev/null 2>&1; then
+		if ! file "$toolpath" | grep -qE 'ELF|Mach-O'; then
+			rm -f "$toolpath"
+			echo "  Error: downloaded file is not a valid binary (ELF/Mach-O)" >&2
+			exit 1
+		fi
+	fi
+
+	chmod +x "$toolpath"
+	echo "  → Tool '$name' installed"
+}
+
+cmd_tools_remove() {
+	local name="$3"
+	[ -z "$name" ] || [[ "$name" =~ ^- ]] && {
+		echo "Usage: pis tools remove <name>"
+		exit 1
+	}
+
+	local toolpath="$SWAP/tools/$name"
+	[ ! -f "$toolpath" ] && {
+		echo "  Tool '$name' is not installed"
+		exit 1
+	}
+
+	rm -f "$toolpath"
+	echo "  → Tool '$name' removed"
+}
+
+cmd_tools_sync() {
+	local name="${3:-current}"
+
+	if [ "$name" = "--all" ]; then
+		echo "  Syncing tools to all environments..."
+		local fail=0 succ=0 total=0
+		for env_dir in "$SWAP"/agent-*; do
+			[ -d "$env_dir" ] || continue
+			total=$((total + 1))
+			local env_name="${env_dir#*/agent-}"
+			echo "    $env_name: syncing tools..."
+			if tools_sync_env "$env_dir"; then
+				succ=$((succ + 1))
+			else
+				fail=$((fail + 1))
+			fi
+		done
+		[ "$fail" -gt 0 ] && echo "  Warning: $fail/$total environment(s) had errors"
+		[ "$fail" -gt 0 ] && exit 1
+		return
+	fi
+
+	local envdir
+	envdir=$(resolve_env_dir "$name")
+	[ ! -d "$envdir" ] && {
+		echo "  Environment '$name' does not exist"
+		exit 1
+	}
+
+	echo "  Syncing tools to $name..."
+	if tools_sync_env "$envdir"; then
+		local count
+		count=$(find "$SWAP/tools" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+		echo "  → Tools synced ($count tools)"
+	else
+		echo "  Warning: sync failed for $name" >&2
+		exit 1
+	fi
+}
+
+# Helper: sync tools to a single environment directory
+tools_sync_env() {
+	local envdir="$1"
+	local bindir="$envdir/bin"
+
+	# Self-healing: create tools/ if missing
+	mkdir -p "$SWAP/tools"
+	mkdir -p "$bindir"
+
+	# Pass 1: Create/repair symlinks for all shared tools
+	for tool in "$SWAP/tools"/*; do
+		[ -f "$tool" ] || continue
+		local name
+		name=$(basename "$tool")
+		ln -snf "../../tools/$name" "$bindir/$name"
+	done
+
+	# Pass 2: Remove broken symlinks pointing to tools/ (cleanup)
+	for f in "$bindir"/*; do
+		[ -L "$f" ] || continue # skip real files
+		[ -e "$f" ] && continue # skip valid symlinks
+		local target
+		target=$(readlink "$f")
+		case "$target" in
+		../../tools/*)
+			rm -f "$f"
+			;;
+		esac
+	done
+}
+
 cmd_help() {
 	echo "pis v$VERSION — Multi pi environment manager"
 	echo ""
@@ -722,6 +912,10 @@ cmd_help() {
 	echo "  pkgs remove <pkg> [env]        Remove a package from an environment"
 	echo "  pkgs update [env]              Update all packages (omit env for current, --all for all)"
 	echo "  pkgs outdated [env]            Show outdated packages in an environment (omit env for current, --all for all)"
+	echo "  tools list                     List installed tools"
+	echo "  tools install <name> --url <URL>  Install a tool from URL"
+	echo "  tools remove <name>            Remove a tool"
+	echo "  tools sync [env|--all]         Sync tools to environment(s)"
 	echo "  uninstall                      Remove pis and restore single-directory mode"
 	echo "  update                         Update pis to the latest version"
 	echo "  --version, -V                  Show version"
@@ -753,6 +947,7 @@ status | st) cmd_status "$@" ;;
 uninstall) cmd_uninstall "$@" ;;
 update) cmd_update "$@" ;;
 packages | pkgs) cmd_packages "$@" ;;
+tools) cmd_tools "$@" ;;
 --version | -V) echo "pis v$VERSION" ;;
 -h | --help | help | *) cmd_help ;;
 esac
