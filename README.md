@@ -163,6 +163,7 @@ If you use [pi-powerline-footer](https://github.com/nicobailon/pi-powerline-foot
 | `pkgs install <pkg> [env]` | Install a package to an environment (omit env for current, use `--all` for all) |
 | `pkgs remove <pkg> [env]` | Remove a package from an environment |
 | `pkgs update [env]` | Update all packages in an environment (omit env for current, `--all` for all) |
+| `pkgs outdated [env]` | Check for outdated packages in an environment (omit env for current, `--all` for all) |
 | `update` | Update pis to the latest version |
 | `uninstall` | Remove pis and restore single-directory mode |
 

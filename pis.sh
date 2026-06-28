@@ -450,10 +450,13 @@ cmd_packages() {
 	update | up)
 		cmd_packages_update "$@"
 		;;
+	outdated | out)
+		cmd_packages_outdated "$@"
+		;;
 	*)
 		# Unknown flags show usage, otherwise list behavior
 		[[ "${2:-}" =~ ^- ]] && {
-			echo "Usage: pis pkgs [env] | install <pkg> [env] | remove <pkg> [env] | update [env]"
+			echo "Usage: pis pkgs [env] | install <pkg> [env] | remove <pkg> [env] | update [env] | outdated [env|--all]"
 			exit 1
 		}
 		local name="${2:-current}" envdir
@@ -467,7 +470,23 @@ cmd_packages() {
 const fs = require('fs');
 const s = JSON.parse(fs.readFileSync('$envdir/settings.json', 'utf-8'));
 const pkgs = s.packages || [];
-pkgs.forEach((p, i) => console.log((i + 1) + '. ' + p));
+const npmPkgPath = '$envdir/npm/package.json';
+let declared = {};
+try { declared = JSON.parse(fs.readFileSync(npmPkgPath, 'utf-8')).dependencies || {}; } catch (e) {}
+const maxLen = pkgs.reduce(function(m, p) { return Math.max(m, p.length); }, 0);
+pkgs.forEach(function(p, i) {
+  var extra = '';
+  if (p.startsWith('npm:')) {
+    var name = p.slice(4);
+    var range = declared[name] || '?';
+    var ver = '?';
+    try { ver = JSON.parse(fs.readFileSync('$envdir/npm/node_modules/' + name + '/package.json', 'utf-8')).version; } catch (e) {}
+    extra = '  ' + range + '  \u2192  ' + ver;
+  } else if (p.startsWith('git:')) {
+    extra = '  (git)';
+  }
+  console.log(String(i + 1).padStart(2) + '. ' + p + ' '.repeat(Math.max(1, maxLen - p.length + 2)) + extra.trimStart());
+});
 console.log('---');
 console.log('Total: ' + pkgs.length + ' packages');
 " 2>&1)
@@ -615,6 +634,70 @@ cmd_packages_update() {
 	fi
 }
 
+cmd_packages_outdated() {
+	local name="${3:-current}"
+	[ "$name" != "--all" ] && [[ "$name" =~ ^- ]] && {
+		echo "Usage: pis pkgs outdated [env|--all]"
+		exit 1
+	}
+
+	if [ "$name" = "--all" ]; then
+		echo "  Checking outdated packages in all environments..."
+		local fail=0 succ=0 total=0
+		for env_dir in "$SWAP"/agent-*; do
+			[ -d "$env_dir" ] || continue
+			total=$((total + 1))
+			local env_name="${env_dir#*/agent-}"
+			echo "    $env_name:"
+			if [ ! -d "$env_dir/npm" ]; then
+				echo "      (no npm directory)"
+				continue
+			fi
+			if outdated_output=$(cd "$env_dir/npm" && npm outdated 2>&1); then
+				echo "      All packages are up to date"
+				succ=$((succ + 1))
+			else
+				local rc=$?
+				if [ $rc -eq 2 ]; then
+					echo "      Error: npm outdated failed" >&2
+					fail=$((fail + 1))
+				else
+					echo "$outdated_output" | sed 's/^/      /'
+					succ=$((succ + 1))
+				fi
+			fi
+			echo ""
+		done
+		[ "$fail" -gt 0 ] && echo "  Warning: $fail/$total environment(s) had errors"
+		[ "$fail" -gt 0 ] && exit 1
+		return
+	fi
+
+	local envdir
+	envdir=$(resolve_env_dir "$name")
+	[ ! -d "$envdir" ] && {
+		echo "  Environment '$name' does not exist"
+		exit 1
+	}
+
+	if [ ! -d "$envdir/npm" ]; then
+		echo "  Environment '$name' has no npm directory"
+		exit 1
+	fi
+
+	echo "Outdated packages in '$name' environment:"
+	if outdated_output=$(cd "$envdir/npm" && npm outdated 2>&1); then
+		echo "  All packages are up to date"
+	else
+		local rc=$?
+		if [ $rc -eq 2 ]; then
+			echo "  Error: npm outdated failed" >&2
+			exit 1
+		fi
+		echo "$outdated_output"
+	fi
+}
+
 cmd_help() {
 	echo "pis v$VERSION — Multi pi environment manager"
 	echo ""
@@ -638,6 +721,7 @@ cmd_help() {
 	echo "  pkgs install <pkg> [env]       Install a package (omit env for current, --all for all)"
 	echo "  pkgs remove <pkg> [env]        Remove a package from an environment"
 	echo "  pkgs update [env]              Update all packages (omit env for current, --all for all)"
+	echo "  pkgs outdated [env]            Show outdated packages in an environment (omit env for current, --all for all)"
 	echo "  uninstall                      Remove pis and restore single-directory mode"
 	echo "  update                         Update pis to the latest version"
 	echo "  --version, -V                  Show version"

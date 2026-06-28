@@ -159,6 +159,7 @@ pi install git:github.com/Githubwujinming/pis-indicator
 | `pkgs install <包名> [环境]` | 安装包到指定环境（省略为当前，--all 为所有） |
 | `pkgs remove <包名> [环境]` | 从指定环境卸载包 |
 | `pkgs update [环境]` | 更新指定环境的所有包（省略为当前，--all 为所有） |
+| `pkgs outdated [环境]` | 检查指定环境中可更新的包（省略为当前，--all 为所有） |
 | `update` | 更新 pis 到最新版本 |
 | `uninstall` | 卸载 pis，恢复单目录模式 |
 
